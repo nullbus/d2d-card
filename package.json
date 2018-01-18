@@ -11,8 +11,11 @@
   "author": "Jaemin Park",
   "license": "ISC",
   "dependencies": {
+    "babel-preset-react": "^6.24.1",
     "google-auth-library": "^0.12.0",
-    "googleapis": "^24.0.0"
+    "googleapis": "^24.0.0",
+    "react": "^16.2.0",
+    "react-dom": "^16.2.0"
   },
   "devDependencies": {
     "babel-core": "^6.26.0",
@@ -25,7 +28,8 @@
   },
   "babel": {
     "presets": [
-      "env"
+      "env",
+      "react"
     ]
   }
 }
