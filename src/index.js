@@ -2,12 +2,37 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import {Link, Route, BrowserRouter} from 'react-router-dom';
 import TemplateEditor from './template-editor';
+import {createStore, combineReducers} from 'redux';
+import {connect, Provider} from 'react-redux';
 
 const CLIENT_ID = '1091131697082-sbl11q8ppq4bbegs9n3sm8dmv0obgvbr.apps.googleusercontent.com';
 const API_KEY = 'AIzaSyAie9sI3kQO5_ntbWSSOwALvOaDfIXMFzs';
 const DISCOVERY_DOCS = ['https://sheets.googleapis.com/$discovery/rest?version=v4', 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'];
 const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive';
 
+let actions = {
+    login: { update: 'login.update' },
+    home: { updateTemplate: 'home.template_list' },
+};
+
+let loginRouter = (state = {status: false}, action) => {
+    if (action.type == actions.login.update)
+        return {status: action.value};
+
+    return state;
+}
+
+let homeRouter = (state = {cardTemplates: []}, action) => {
+    if (action.type == actions.home.updateTemplate)
+        return {cardTemplates: action.files};
+
+    return state;
+}
+
+let store = createStore(combineReducers({
+    login: loginRouter,
+    home: homeRouter,
+}));
 
 function onSigninStatusUpdate(isSignedIn) {
     signedIn = isSignedIn;
@@ -33,33 +58,21 @@ function onSigninStatusUpdate(isSignedIn) {
 }
 
 class Home extends React.Component {
-    constructor() {
-        super();
-
-        this.state = {
-            signedIn: false,
-            cardTemplates: [],
-        }; }
-
     onSignResult(ok) {
         console.log(ok);
-        this.setState({signedIn: ok})
+        this.props.onLogin(ok);
 
         if (ok) {
             // fetch files
             gapi.client.drive.files.list({
                 q: "'1jRDYn-BQB4xrfzN-zkgdddAFp_8YeRA_' in parents",
             }).then(resp => {
-                this.setState({cardTemplates: resp.result.files});
+                this.props.onUpdateTemplates(resp.result.files);
             }).catch(err => alert('err: ' + JSON.stringify(err)));
         }
     }
 
     onSignButton(e) {
-        if (this.state.signedIn) {
-            return;
-        }
-
         let gapiScript = document.createElement('script');
         gapiScript.onload = e => {
             gapiScript.onload = e => {};
@@ -93,13 +106,13 @@ class Home extends React.Component {
         return (
         <div>
             <div>
-                <button onClick={e => this.onSignButton(e)} disabled={this.state.signedIn}>Login</button>
+                <button onClick={e => this.onSignButton(e)} disabled={this.props.login.status}>Login</button>
             </div>
             <div>
                 <h4>Files</h4>
                 <ul>
-                {this.state.cardTemplates.map(tmpl => {
-                    return <li key={tmpl.id}>{tmpl.name} <Link to="/edit"><button>edit</button></Link></li>
+                {this.props.templates.map(tmpl => {
+                    return <li key={tmpl.id}>{tmpl.name} <Link to={'/edit/' + tmpl.id}><button>edit</button></Link></li>
                 })}
                 </ul>
             </div>
@@ -108,15 +121,28 @@ class Home extends React.Component {
     }
 }
 
+Home = connect(
+    state => ({
+        login: state.login,
+        templates: state.home.cardTemplates,
+    }),
+    dispatch => ({
+        onLogin: ok => dispatch({type: actions.login.update, value: ok}),
+        onUpdateTemplates: files => dispatch({type: actions.home.updateTemplate, files: files}),
+    }),
+)(Home);
+
 class App extends React.Component {
     render() {
         return (
+        <Provider store={store}>
         <BrowserRouter>
             <div>
                 <Route exact path="/" component={Home} />
-                <Route path="/edit" component={TemplateEditor} />
+                <Route path="/edit/:id" component={TemplateEditor} />
             </div>
         </BrowserRouter>
+        </Provider>
         );
     }
 }

@@ -1,6 +1,7 @@
 import React from 'react';
+import {connect} from 'react-redux';
 
-export default class TemplateEditor extends React.Component {
+class TemplateEditor extends React.Component {
     constructor() {
         super();
 
@@ -9,12 +10,13 @@ export default class TemplateEditor extends React.Component {
         };
     }
 
-    componentWillReceiveProps(nextProps) {
-        if (nextProps.id == this.props.id)
-            return;
+    componentDidMount() {
+        this.props.match.params.id
     }
 
     render() {
-        return <div></div>;
+        return <div>{this.props.match.params.id}</div>;
     }
 }
+
+export default TemplateEditor;
