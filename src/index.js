@@ -1,9 +1,10 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import {Link, Route, BrowserRouter} from 'react-router-dom';
-import TemplateEditor from './template-editor';
 import {createStore, combineReducers} from 'redux';
 import {connect, Provider} from 'react-redux';
+import RentPage from './rent';
+import TemplateEditor from './template-editor';
 
 const CLIENT_ID = '1091131697082-sbl11q8ppq4bbegs9n3sm8dmv0obgvbr.apps.googleusercontent.com';
 const API_KEY = 'AIzaSyAie9sI3kQO5_ntbWSSOwALvOaDfIXMFzs';
@@ -109,6 +110,9 @@ class Home extends React.Component {
                 <button onClick={e => this.onSignButton(e)} disabled={this.props.login.status}>Login</button>
             </div>
             <div>
+                { this.props.login.status ? <Link to="/rent"><button>Rental</button></Link> : null }
+            </div>
+            <div>
                 <h4>Files</h4>
                 <ul>
                 {this.props.templates.map(tmpl => {
@@ -140,6 +144,7 @@ class App extends React.Component {
             <div>
                 <Route exact path="/" component={Home} />
                 <Route path="/edit/:id" component={TemplateEditor} />
+                <Route path="/rent" component={RentPage} />
             </div>
         </BrowserRouter>
         </Provider>
