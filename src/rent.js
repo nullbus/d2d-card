@@ -1,6 +1,7 @@
 import React from 'react';
 
 const RentRecordSheetID = '1WOGV8BUZQwp3y1DMP5v2Jkv41XHGKWQ0bkpXkIq7x8Q';
+const RentRecordDirectory = '15LGQrR3NA4NymT7fBhkSt8rCVMpnHvmJ';
 
 class RentPage extends React.Component {
     constructor() {
@@ -27,9 +28,36 @@ class RentPage extends React.Component {
         }).catch(err => alert('err: ' + err.body));
     }
 
+    ensureRentDirectoryExists(subdir) {
+        let checkDirectory = (resolve, reject) => {
+            gapi.client.drive.files.list({
+                q: "'{dir}' in parents and mimeType='application/vnd.google-apps.folder' and name='{name}'".replace(/{dir}/, RentRecordDirectory).replace(/{name}/, subdir),
+            }).then(resp => {
+                if (resp.result.files.length) {
+                    resolve(resp.result.files[0].id);
+                    return;
+                }
+
+                createDirectory(resolve, reject);
+            }, reject)
+        };
+
+        let createDirectory = (resolve, reject) => {
+            gapi.client.drive.files.create({}, {
+                name: subdir,
+                mimeType: 'application/vnd.google-apps.folder',
+                parents: [RentRecordDirectory],
+            }).then(resp => {
+                console.log(resp.result);
+                resolve(resp.result.id);
+            }, reject);
+        }
+
+        return new Promise(checkDirectory);
+    }
+
     onRentButton(number) {
-        let name = prompt('put a name');
-        if (Boolean(name)) {
+        let insertRecord = directory => {
             let row = [number, new Date().toISOString(), 'temp_qr_link', name];
             gapi.client.sheets.spreadsheets.values.append({
                 spreadsheetId: RentRecordSheetID,
@@ -42,6 +70,18 @@ class RentPage extends React.Component {
                 console.log(resp.result);
                 this.updateSingle(number);
             }).catch(err => console.error(err.body));
+        }
+
+        let name = prompt('put a name');
+        if (Boolean(name)) {
+            let now = new Date();
+            let todayStr = new Date(now.getTime() - now.getTimezoneOffset()*60000).toISOString();
+
+            // check directory
+            let subdir = todayStr.slice(0, todayStr.indexOf('T'));
+            this.ensureRentDirectoryExists(subdir)
+                .then(insertRecord)
+                .catch(err => console.error(err));
         }
     }
 
