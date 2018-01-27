@@ -2,6 +2,7 @@ import React from 'react';
 
 const RentRecordSheetID = '1WOGV8BUZQwp3y1DMP5v2Jkv41XHGKWQ0bkpXkIq7x8Q';
 const RentRecordDirectory = '15LGQrR3NA4NymT7fBhkSt8rCVMpnHvmJ';
+const TemplateDirectory = '1jRDYn-BQB4xrfzN-zkgdddAFp_8YeRA_';
 
 class RentPage extends React.Component {
     constructor() {
@@ -28,59 +29,84 @@ class RentPage extends React.Component {
         }).catch(err => alert('err: ' + err.body));
     }
 
-    ensureRentDirectoryExists(subdir) {
-        let checkDirectory = (resolve, reject) => {
-            gapi.client.drive.files.list({
-                q: "'{dir}' in parents and mimeType='application/vnd.google-apps.folder' and name='{name}'".replace(/{dir}/, RentRecordDirectory).replace(/{name}/, subdir),
-            }).then(resp => {
-                if (resp.result.files.length) {
-                    resolve(resp.result.files[0].id);
-                    return;
-                }
-
-                createDirectory(resolve, reject);
-            }, reject)
-        };
-
-        let createDirectory = (resolve, reject) => {
-            gapi.client.drive.files.create({}, {
-                name: subdir,
-                mimeType: 'application/vnd.google-apps.folder',
-                parents: [RentRecordDirectory],
-            }).then(resp => {
-                console.log(resp.result);
-                resolve(resp.result.id);
-            }, reject);
-        }
-
-        return new Promise(checkDirectory);
-    }
-
-    onRentButton(number) {
-        let insertRecord = directory => {
-            let row = [number, new Date().toISOString(), 'temp_qr_link', name];
-            gapi.client.sheets.spreadsheets.values.append({
-                spreadsheetId: RentRecordSheetID,
-                range: '시트1!A:D',
-                valueInputOption: 'USER_ENTERED',
-            },
-            {
-                values: [row],
-            }).then(resp => {
-                console.log(resp.result);
-                this.updateSingle(number);
-            }).catch(err => console.error(err.body));
-        }
-
-        let name = prompt('put a name');
-        if (Boolean(name)) {
+    doRent(number) {
+        return new Promise((resolve, reject) => {
             let now = new Date();
             let todayStr = new Date(now.getTime() - now.getTimezoneOffset()*60000).toISOString();
+            let strNumber = number.toFixed(0);
+            if (number < 10)
+                strNumber = '0' + strNumber;
+            if (number < 100)
+                strNumber = '0' + strNumber;
+            if (number < 1000)
+                strNumber = '0' + strNumber;
 
             // check directory
             let subdir = todayStr.slice(0, todayStr.indexOf('T'));
-            this.ensureRentDirectoryExists(subdir)
-                .then(insertRecord)
+            let checkDirectory = cb => {
+                gapi.client.drive.files.list({
+                    q: "'{dir}' in parents and mimeType='application/vnd.google-apps.folder' and name='{name}'".replace(/{dir}/, RentRecordDirectory).replace(/{name}/, subdir),
+                }).then(resp => {
+                    if (resp.result.files.length) {
+                        cb(resp.result.files[0].id);
+                        return;
+                    }
+
+                    createDirectory(cb);
+                }, reject)
+            };
+
+            let createDirectory = cb => {
+                gapi.client.drive.files.create({}, {
+                    name: subdir,
+                    mimeType: 'application/vnd.google-apps.folder',
+                    parents: [RentRecordDirectory],
+                }).then(resp => {
+                    console.log(resp.result);
+                    cb(resp.result.id);
+                }, reject);
+            };
+
+            let searchTemplate = cb => {
+                let name = 'card-' + strNumber;
+                gapi.client.drive.files.list({
+                    q: "'{dir}' in parents and mimeType='application/vnd.google-apps.spreadsheet' and name='{name}'".replace(/{dir}/, TemplateDirectory).replace(/{name}/, name)
+                })
+                .then(resp => cb(resp.result.files[0].id))
+                .catch(reject);
+            }
+
+            let copyTemplate = cb => directory => {
+                searchTemplate(id => {
+                    gapi.client.drive.files.copy({fileId: id}, {
+                        name: 'rent-' + strNumber,
+                        parents: [directory],
+                    })
+                    .then(resp => cb(resp.result))
+                    .catch(reject);
+                });
+            }
+
+            let insertRecord = cardFile => {
+                let row = [number, new Date().toISOString(), cardFile.webViewLink, name];
+                gapi.client.sheets.spreadsheets.values.append({
+                    spreadsheetId: RentRecordSheetID,
+                    range: '시트1!A:D',
+                    valueInputOption: 'USER_ENTERED',
+                },
+                { values: [row] })
+                .then(resp => resolve())
+                .catch(reject);
+            }
+
+            checkDirectory(copyTemplate(insertRecord));
+        });
+    }
+
+    onRentButton(number) {
+        if (prompt('put a name')) {
+            this.doRent(number)
+                .then(() => this.updateSingle(number))
                 .catch(err => console.error(err));
         }
     }
