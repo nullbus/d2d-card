@@ -5,23 +5,12 @@ import {createStore, combineReducers} from 'redux';
 import {connect, Provider} from 'react-redux';
 import RentPage from './rent';
 import TemplateEditor from './template-editor';
-
-const CLIENT_ID = '1091131697082-sbl11q8ppq4bbegs9n3sm8dmv0obgvbr.apps.googleusercontent.com';
-const API_KEY = 'AIzaSyAie9sI3kQO5_ntbWSSOwALvOaDfIXMFzs';
-const DISCOVERY_DOCS = ['https://sheets.googleapis.com/$discovery/rest?version=v4', 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'];
-const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive';
+import {MinistryPaper} from './paper';
+import {GApiWrapper, GApiWrapperActions, RequestSignin} from './gapi-wrapper';
 
 let actions = {
-    login: { update: 'login.update' },
     home: { updateTemplate: 'home.template_list' },
 };
-
-let loginRouter = (state = {status: false}, action) => {
-    if (action.type == actions.login.update)
-        return {status: action.value};
-
-    return state;
-}
 
 let homeRouter = (state = {cardTemplates: []}, action) => {
     if (action.type == actions.home.updateTemplate)
@@ -31,86 +20,34 @@ let homeRouter = (state = {cardTemplates: []}, action) => {
 }
 
 let store = createStore(combineReducers({
-    login: loginRouter,
     home: homeRouter,
+    api: GApiWrapperActions,
 }));
 
-function onSigninStatusUpdate(isSignedIn) {
-    signedIn = isSignedIn;
-
-    if (isSignedIn) {
-        console.log('signed in');
-
-        gapi.client.sheets.spreadsheets.values.get({ spreadsheetId: '1XYhF38bNaxp4FBUh3LSJ9dNAc6l7hTOunA7nuAjLKSU',
-            range: '시트1!A1:E'
-        }).then(resp => {
-            let range = resp.result;
-            alert('range:' + range.toString());
-        }).catch(err => alert('err: ' + err.body));
-
+class Home extends React.Component {
+    fetchTemplates() {
+        // fetch files
         gapi.client.drive.files.list({
             q: "'1jRDYn-BQB4xrfzN-zkgdddAFp_8YeRA_' in parents",
         }).then(resp => {
-            alert(resp.result.files.length);
-        }).catch(err => alert('err: ' + err.body));
-    } else {
-        console.log('signed out');
-    }
-}
-
-class Home extends React.Component {
-    onSignResult(ok) {
-        console.log(ok);
-        this.props.onLogin(ok);
-
-        if (ok) {
-            // fetch files
-            gapi.client.drive.files.list({
-                q: "'1jRDYn-BQB4xrfzN-zkgdddAFp_8YeRA_' in parents",
-            }).then(resp => {
-                this.props.onUpdateTemplates(resp.result.files);
-            }).catch(err => alert('err: ' + JSON.stringify(err)));
-        }
+            this.props.onUpdateTemplates(resp.result.files);
+        }).catch(err => alert('err: ' + JSON.stringify(err)));
     }
 
-    onSignButton(e) {
-        let gapiScript = document.createElement('script');
-        gapiScript.onload = e => {
-            gapiScript.onload = e => {};
-
-            gapi.load('client:auth2', () => gapi.client.init({
-                apiKey: API_KEY,
-                clientId: CLIENT_ID,
-                discoveryDocs: DISCOVERY_DOCS,
-                scope: SCOPES,
-            }).then(() => {
-                gapi.auth2.getAuthInstance().isSignedIn.listen(this.onSignResult);
-
-                // handle the initial sign-in state
-                this.onSignResult(gapi.auth2.getAuthInstance().isSignedIn.get());
-                gapi.auth2.getAuthInstance().signIn();
-            }).catch(err => {
-                console.log(err);
-            }));
+    componentWillReceiveProps(nextProps) {
+        if (this.props.api.signedIn != nextProps.api.signedIn && nextProps.api.signedIn) {
+            this.fetchTemplates();
         }
-
-        gapiScript.onreadystatechange = e => {
-            if (gapiScript.readyState == 'complete')
-                gapiScript.onload(e);
-        }
-
-        gapiScript.src = 'https://apis.google.com/js/api.js';
-        document.body.appendChild(gapiScript);
     }
 
     render() {
         return (
         <div>
             <div>
-                <button onClick={e => this.onSignButton(e)} disabled={this.props.login.status}>Login</button>
+                <button onClick={e => this.props.onSignRequest()} disabled={!this.props.api.apiAvailable || this.props.api.signedIn}>Login</button>
             </div>
             <div>
-                { this.props.login.status ? <Link to="/rent"><button>Rental</button></Link> : null }
+                { this.props.api.signedIn ? <Link to="/rent"><button>Rental</button></Link> : null }
             </div>
             <div>
                 <h4>Files</h4>
@@ -127,11 +64,11 @@ class Home extends React.Component {
 
 Home = connect(
     state => ({
-        login: state.login,
+        api: state.api,
         templates: state.home.cardTemplates,
     }),
     dispatch => ({
-        onLogin: ok => dispatch({type: actions.login.update, value: ok}),
+        onSignRequest: () => dispatch(RequestSignin()),
         onUpdateTemplates: files => dispatch({type: actions.home.updateTemplate, files: files}),
     }),
 )(Home);
@@ -140,13 +77,15 @@ class App extends React.Component {
     render() {
         return (
         <Provider store={store}>
-        <BrowserRouter>
-            <div>
-                <Route exact path="/" component={Home} />
-                <Route path="/edit/:id" component={TemplateEditor} />
-                <Route path="/rent" component={RentPage} />
-            </div>
-        </BrowserRouter>
+            <BrowserRouter>
+                <div>
+                    <Route exact path="/" component={Home} />
+                    <Route path="/edit/:id" component={TemplateEditor} />
+                    <Route path="/rent" component={RentPage} />
+                    <Route path="/paper/:id" component={MinistryPaper} />
+                    <GApiWrapper />
+                </div>
+            </BrowserRouter>
         </Provider>
         );
     }
