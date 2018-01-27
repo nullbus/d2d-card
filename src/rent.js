@@ -29,8 +29,14 @@ class RentPage extends React.Component {
         }).catch(err => alert('err: ' + err.body));
     }
 
-    doRent(number) {
+    doRent(renteeName, number) {
         return new Promise((resolve, reject) => {
+            // override reject
+            reject = (original => () => {
+                console.trace();
+                original.apply(this, arguments)
+            })(reject);
+
             let now = new Date();
             let todayStr = new Date(now.getTime() - now.getTimezoneOffset()*60000).toISOString();
             let strNumber = number.toFixed(0);
@@ -77,18 +83,44 @@ class RentPage extends React.Component {
             }
 
             let copyTemplate = cb => directory => {
-                searchTemplate(id => {
-                    gapi.client.drive.files.copy({fileId: id}, {
-                        name: 'rent-' + strNumber,
-                        parents: [directory],
+                let filename = 'rent-' + strNumber;
+
+                // search for already copied file
+                gapi.client.drive.files.list({
+                    q: "'{dir}' in parents and mimeType='application/vnd.google-apps.spreadsheet' and name='{name}'".replace(/{dir}/, directory).replace(/{name}/, filename)
+                })
+                .then(resp => {
+                    if (resp.result.files.length) {
+                        // 이미 파일이 생성되어 있음
+                        openPermission(resp.result.files[0]);
+                        return;
+                    }
+
+                    // 없으면 템플릿에서 복사
+                    searchTemplate(id => {
+                        gapi.client.drive.files.copy({fileId: id}, {
+                            name: 'rent-' + strNumber,
+                            parents: [directory],
+                        })
+                        .then(resp => openPermission(resp.result))
+                        .catch(reject);
+                    });
+                })
+
+                // 모두에게 쓰기 권한을 준 뒤 주소가 담긴 파일을 넘긴다
+                let openPermission = file => {
+                    gapi.client.drive.permissions.create({ fileId: file.id }, {
+                        role: 'writer',
+                        type: 'anyone',
                     })
-                    .then(resp => cb(resp.result))
-                    .catch(reject);
-                });
+                    .then(resp => gapi.client.drive.files.get({fileId: file.id, fields: 'id,webViewLink'}).then(resp => cb(resp.result))) // get updated file for link
+                    .catch(reject)
+                }
             }
 
             let insertRecord = cardFile => {
-                let row = [number, new Date().toISOString(), cardFile.webViewLink, name];
+                console.log(cardFile);
+                let row = [number, now.toISOString(), cardFile.webViewLink, renteeName];
                 gapi.client.sheets.spreadsheets.values.append({
                     spreadsheetId: RentRecordSheetID,
                     range: '시트1!A:D',
@@ -104,8 +136,9 @@ class RentPage extends React.Component {
     }
 
     onRentButton(number) {
-        if (prompt('put a name')) {
-            this.doRent(number)
+        let rentee = prompt('put a name');
+        if (Boolean(rentee)) {
+            this.doRent(rentee, number)
                 .then(() => this.updateSingle(number))
                 .catch(err => console.error(err));
         }
