@@ -13,7 +13,8 @@ module.exports = {
         filename: 'bundle.js'
     },
     devServer: {
-        contentBase: distDir
+        contentBase: distDir,
+        historyApiFallback: true,
     },
     module: {
         loaders: [

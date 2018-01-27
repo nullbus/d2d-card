@@ -49,6 +49,7 @@ class Home extends React.Component {
             <div>
                 { this.props.api.signedIn ? <Link to="/rent"><button>Rental</button></Link> : null }
             </div>
+            <SeeWork />
             <div>
                 <h4>Files</h4>
                 <ul>
@@ -72,6 +73,23 @@ Home = connect(
         onUpdateTemplates: files => dispatch({type: actions.home.updateTemplate, files: files}),
     }),
 )(Home);
+
+class SeeWork extends React.Component {
+    constructor() {
+        super();
+
+        this.state = {text: ''};
+    }
+
+    render() {
+        return (
+        <form>
+            <input type="text" value={this.state.text} onChange={e => this.setState({text: e.target.value})} />
+            <Link to={"/paper/"+this.state.text}><button>GO work</button></Link>
+        </form>
+        );
+    }
+}
 
 class App extends React.Component {
     render() {

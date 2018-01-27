@@ -15,7 +15,7 @@ class MinistryPaper extends React.Component {
     }
 
     componentDidMount() {
-        gapi.client.spreadsheets.values.get({
+        gapi.client.sheets.spreadsheets.values.get({
             spreadsheetId: this.props.match.params.id,
             range: '시트1!A1:B1',
         })
