@@ -1,4 +1,5 @@
 import React from 'react';
+import {Link} from 'react-router-dom'
 
 const RentRecordSheetID = '1WOGV8BUZQwp3y1DMP5v2Jkv41XHGKWQ0bkpXkIq7x8Q';
 const RentRecordDirectory = '15LGQrR3NA4NymT7fBhkSt8rCVMpnHvmJ';
@@ -169,6 +170,7 @@ class RentPage extends React.Component {
     render() {
         return (
         <div>
+            <Link to="/"><button>Back</button></Link>
             <table>
                 <thead>
                     <tr>
@@ -184,7 +186,7 @@ class RentPage extends React.Component {
                     <tr key={record.id}>
                         <td>{String(record.id)}</td>
                         <td>{record.date}</td>
-                        <td><a href={record.url}>Link</a></td>
+                        <td><Link to={'/paper/' + record.url}>Link</Link></td>
                         <td>{record.rentee}</td>
                         <td><button onClick={e => this.onRentButton(i+1)}>Lend {i+1}</button></td>
                     </tr>

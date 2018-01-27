@@ -1,18 +1,14 @@
 import React from 'react';
 import {connect} from 'react-redux';
 import {Link} from 'react-router-dom';
+import {CardMetadata} from './metadata';
 
 class TemplateEditor extends React.Component {
     constructor() {
         super();
 
         this.state = {
-            meta: {
-                card: 0,
-                groups: [],
-                numHouses: 0,
-                name: '',
-            },
+            meta: new CardMetadata(),
             houses: [],
             fetching: true,
         };
