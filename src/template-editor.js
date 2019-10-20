@@ -17,7 +17,7 @@ class TemplateEditor extends React.Component {
     componentDidMount() {
         gapi.client.sheets.spreadsheets.values.get({
             spreadsheetId: this.props.match.params.id,
-            range: '시트1!A1',
+            range: 'data!A1:A1',
         }).then(resp => this.onMetadata(resp.result), err => alert('err: ' + err.body));
     }
 
@@ -30,7 +30,7 @@ class TemplateEditor extends React.Component {
         if (meta.numHouses > 0) {
             gapi.client.sheets.spreadsheets.values.get({
                 spreadsheetId: this.props.match.params.id,
-                range: "'시트1'!A3:D" + (meta.numHouses + 2),
+                range: "'data'!A3:D" + (meta.numHouses + 2),
             }).then(resp => {
                 let houses = resp.result.values.map((row, i) => {
                     return {

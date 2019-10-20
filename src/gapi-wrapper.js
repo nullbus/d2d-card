@@ -12,7 +12,7 @@ const ActionSignedIn = 'gapi.signedin';
 const ActionRequestSignin = 'gapi.signin';
 
 const CLIENT_ID = '1091131697082-sbl11q8ppq4bbegs9n3sm8dmv0obgvbr.apps.googleusercontent.com';
-const API_KEY = 'AIzaSyAie9sI3kQO5_ntbWSSOwALvOaDfIXMFzs';
+const API_KEY = 'AIzaSyBnhF_UNxVzc8RNGMu6wR0LqNZObzeiJbU';
 const DISCOVERY_DOCS = ['https://sheets.googleapis.com/$discovery/rest?version=v4', 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'];
 const SCOPES_GUEST = 'https://www.googleapis.com/auth/spreadsheets';
 const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive';
